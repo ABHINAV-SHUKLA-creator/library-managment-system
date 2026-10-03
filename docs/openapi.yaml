@@ -1,0 +1,68 @@
+openapi: 3.0.3
+info:
+  title: Library Management System API
+  version: 1.0.0
+servers:
+  - url: http://localhost:3000
+paths:
+  /auth/register:
+    post:
+      summary: Register user
+      requestBody:
+        required: true
+      responses:
+        '201':
+          description: Created
+  /auth/login:
+    post:
+      summary: Login
+      responses:
+        '200':
+          description: OK
+  /books:
+    get:
+      summary: List books
+      responses:
+        '200':
+          description: OK
+    post:
+      summary: Create book
+      responses:
+        '201':
+          description: Created
+  /borrow-requests:
+    post:
+      summary: Create borrow request
+      responses:
+        '201':
+          description: Created
+  /borrow-requests/{id}/approve:
+    post:
+      summary: Approve request and issue loan
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '201':
+          description: Created
+  /loans/{id}/return:
+    post:
+      summary: Return a loan
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+  /payments/mock:
+    post:
+      summary: Mock payment
+      responses:
+        '201':
+          description: Created
