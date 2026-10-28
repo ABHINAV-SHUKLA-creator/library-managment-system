@@ -11,6 +11,17 @@ const bookSchema = new mongoose.Schema({
         required: true,
         trim: true
     },
+    language: {
+        type: String,
+        default: "en",
+        enum: [
+        "en", "hi", "bn", "te", "mr", "ta", "ur",
+        "gu", "kn", "ml", "pa", "or", "as",
+        "ar", "fr", "de", "es", "zh", "ja", "ko",
+        "ru", "pt", "it", "nl", "tr", "pl", "sv"
+        ],
+        index: true
+    },
     isbn: {
         type: String,
         required: true,
@@ -18,7 +29,7 @@ const bookSchema = new mongoose.Schema({
         trim: true
     },
     category: {
-        type: String,
+        type: [String],
         required: true,
         trim: true,
         lowercase: true,
@@ -31,9 +42,21 @@ const bookSchema = new mongoose.Schema({
     publishedDate: {
         type: Date
     },
+    publisher: {
+        type: String,
+        default: ""
+    },
+    description: { 
+        type: String,
+        trim: true 
+    },
+    pageCount: {
+        type: Number,
+        min: 1
+    },
 }, {timestamps: true});
 
-// indexing the title and author fields for faster search
-bookSchema.index({ title: 'text', author: 'text' });
+// indexing the title, author, description, and category fields for text search
+bookSchema.index({ title: 'text', author: 'text' , description: 'text' , category: 'text' }, { weights: { title: 5, author: 3, description: 2, category: 1 } });
 
 export const Book = mongoose.model("Book", bookSchema);
