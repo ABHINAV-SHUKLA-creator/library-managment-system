@@ -1,0 +1,16 @@
+import { GRACE_PERIOD_DAYS, DAILY_FINE } from '../constants.js';
+
+function calcFine(dueDate, returnDate) {
+    if (!dueDate) return 0;
+
+    const now = returnDate || new Date();
+    if (now <= dueDate) return 0;
+
+    const diffMs = now - dueDate;
+    const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+    const billableDays = Math.max(0, diffDays - GRACE_PERIOD_DAYS);
+
+    return billableDays * DAILY_FINE;
+}
+
+export default calcFine;
