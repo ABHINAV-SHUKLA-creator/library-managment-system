@@ -1,7 +1,10 @@
 import mongoose from "mongoose"
+import bcrypt from "bcryptjs"
+import jwt from "jsonwebtoken"
+
 
 const userSchema = new mongoose.Schema({
-    name: {
+    username: {
         type: String,
         required: true,
         trim: true
@@ -25,7 +28,21 @@ const userSchema = new mongoose.Schema({
     }
 }, {timestamps: true});
 
-// indexing the name fields for faster search
-userSchema.index({ name: 'text'});
+userSchema.pre('save', async function(next) {
+    if (!this.isModified('password')) return next();
+
+    const bcrypt = await import('bcryptjs');
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
+    next();
+})
+
+userSchema.methods.comparePassword = async function(password){
+    return await bcrypt.compare(password,this.password)
+}
+
+
+// indexing the username fields for faster search
+userSchema.index({ username: 'text'});
 
 export const User = mongoose.model("User", userSchema);

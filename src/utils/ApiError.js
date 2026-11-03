@@ -6,9 +6,7 @@ class ApiError extends Error {
     this.message = message
     this.sucess = false
     this.errors = errors
-
-    //stack → where in the code the error happened (for developers debugging).
-    // If a stack trace is provided, use it. Otherwise, capture the stack trace. 
+     
     if(stack) {
       this.stack = stack
     }else{
