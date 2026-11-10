@@ -26,6 +26,16 @@ const settingsSchema = new mongoose.Schema({
         type: String,
         trim: true
     },
+    maxBorrowLimit: {
+        type: Number,
+        required: true,
+        default: 5,
+    },
+    finePerDay: {
+        type: Number,
+        required: true,
+        default: 5.00,
+    },
 }, {timestamps: true});
 
 export const Settings = mongoose.model("Settings", settingsSchema);
