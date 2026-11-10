@@ -24,8 +24,28 @@ const userSchema = new mongoose.Schema({
     },
     role: {
         type: String,
-        enum: ['user', 'admin'],
-        default: 'user'
+        enum: ['student', 'employee', 'admin'],
+        default: 'student'
+    },
+    memberId: {
+        type: String,
+        unique: true,
+        trim: true,
+        required: true,
+        uppercase: true
+    },
+    phoneNumber: {
+        type: String,
+        trim: true,
+        match: [/^\+?[1-9]\d{1,14}$/, 'enter a valid phone number'],
+    },
+    borrowedBooks: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Book'
+    }],
+    isActive: {
+        type: Boolean,
+        default: true
     }
 }, {timestamps: true});
 

@@ -1,4 +1,5 @@
 import mongoose from "mongoose"
+import mongooseAggregatePaginate from "mongoose-aggregate-paginate-v2"
 
 const bookSchema = new mongoose.Schema({
     title: {
@@ -58,5 +59,8 @@ const bookSchema = new mongoose.Schema({
 
 // indexing the title, author, description, and category fields for text search
 bookSchema.index({ title: 'text', author: 'text' , description: 'text' , category: 'text' }, { weights: { title: 5, author: 3, description: 2, category: 1 } });
+
+// pagination
+bookSchema.plugin(mongooseAggregatePaginate)
 
 export const Book = mongoose.model("Book", bookSchema);
