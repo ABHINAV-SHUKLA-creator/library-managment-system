@@ -36,6 +36,20 @@ const settingsSchema = new mongoose.Schema({
         required: true,
         default: 5.00,
     },
+    dueDatePolicy: {
+        type: String,
+        enum: ['fixed_days', 'semester_end'],
+        default: 'fixed_days',
+        required: true
+    },
+    semesterEndDate: {
+        type: Date,
+        default: null
+    },
+    borrowDurationDays: {
+        type: Number,
+        default: 14
+    }
 }, {timestamps: true});
 
 export const Settings = mongoose.model("Settings", settingsSchema);

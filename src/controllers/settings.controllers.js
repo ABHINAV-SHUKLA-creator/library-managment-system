@@ -13,7 +13,9 @@ const getSettings = asyncHandler(async (req, res) => {
             libraryEmail: "info@mylibrary.com",
             libraryWebsite: "https://www.mylibrary.com",
             maxBorrowLimit: 5,
-            finePerDay: 5.00
+            finePerDay: 5.00,
+            dueDatePolicy: "fixed_days",
+            borrowDurationDays: 14
         });
     }
     return res.status(200).json(new ApiResponse(200, settings, "Settings retrieved successfully"));
@@ -32,6 +34,33 @@ const updateSettings = asyncHandler(async (req, res) => {
 
     if(updateFields.finePerDay!== undefined && updateFields.finePerDay < 0) {
         throw new ApiError(400, "Fine per day cannot be negative")
+    }
+     
+    // Validate dueDatePolicy and semesterEndDate if they are being updated
+    if(updateFields.dueDatePolicy!==undefined) {
+        const validPolicies = ['fixed_days', 'semester_end']
+        if(!validPolicies.includes(updateFields.dueDatePolicy)) {
+            throw new ApiError(400, "Invalid due date policy")
+        }
+    }
+
+    if(updateFields.borrowDurationDays!== undefined && updateFields.borrowDurationDays < 1) {
+        throw new ApiError(400, "Borrow duration must be at least 1 day")
+    }
+
+    if(updateFields.semesterEndDate!== undefined ){
+        const parsedDate = new Date(updateFields.semesterEndDate)
+        if(isNaN(parsedDate.getTime())|| parsedDate <= new Date()){
+            throw new ApiError(400, "Invalid semester end date")
+        }
+        updateFields.semesterEndDate = parsedDate
+    }
+    //prevent switching to semester_end policy without a valid semesterEndDate
+    if(updateFields.dueDatePolicy === 'semester_end' && !updateFields.semesterEndDate) {
+        const currentSettings = await Settings.findOne({})
+        if(!currentSettings?.semesterEndDate || currentSettings.semesterEndDate <= new Date()){
+            throw new ApiError(400, "Semester end date must be set when due date policy is 'semester_end'")
+        }
     }
 
     const updatedSettings = await Settings.findOneAndUpdate(

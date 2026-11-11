@@ -178,3 +178,5 @@ const updateBook = asyncHandler(async(req,res) => {
         new ApiResponse(200, 'book updated successfully', updatedBook)
     )   
 })
+
+export { allBooks, getById, getByCategory, addBook, removeBook, updateBook }
