@@ -4,7 +4,7 @@ import {ApiError} from "../utils/ApiError.js"
 import {ApiResponse} from "../utils/ApiResponse.js"
 
 const getSettings = asyncHandler(async (req, res) => {
-    const settings = await Settings.findOne({})
+    let settings = await Settings.findOne({})
     if (!settings) {
         settings = await Settings.create({
             libraryName: "My Library",
@@ -22,14 +22,12 @@ const getSettings = asyncHandler(async (req, res) => {
 });
 
 const updateSettings = asyncHandler(async (req, res) => {
-    const {libraryName, libraryAddress, libraryContactNumber, libraryEmail, libraryWebsite, maxBorrowLimit, finePerDay} = req.body
 
     const updateFields = {}
 
-    Object.keys(req.body).forEach((key) => {
-        if(req.body[key] !== undefined) {
-            updateFields[key] = req.body[key]
-        }
+    const allowed = ['libraryName','libraryAddress','libraryContactNumber','libraryEmail','libraryWebsite','maxBorrowLimit','finePerDay','gracePeriodDays','dueDatePolicy','semesterEndDate','borrowDurationDays']
+    allowed.forEach((key) => {
+        if (req.body[key] !== undefined) updateFields[key] = req.body[key]
     })
 
     if(updateFields.maxBorrowLimit!== undefined && updateFields.maxBorrowLimit < 1) {
@@ -70,12 +68,9 @@ const updateSettings = asyncHandler(async (req, res) => {
     const updatedSettings = await Settings.findOneAndUpdate(
         {}, 
         {$set: updateFields}, 
-        {new: true}
+        {new: true},
+        {runValidators: true}
     )
-
-    if (!updatedSettings) {
-        throw new ApiError(500, "Failed to update settings")
-    }
 
     return res
     .status(200)

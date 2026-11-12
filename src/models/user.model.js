@@ -6,6 +6,7 @@ const userSchema = new mongoose.Schema({
     username: {
         type: String,
         required: true,
+        unique: true,
         trim: true
     },
     email: {
@@ -14,7 +15,7 @@ const userSchema = new mongoose.Schema({
         unique: true,
         trim: true,
         lowercase: true,
-        match: [/^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/, 'enter a valid email address'],
+        match: [/^[\w-\.]+@([\w-]+\.)+[\w-]{2,}$/, 'enter a valid email address'],
     },
     password: {
         type: String,
@@ -26,6 +27,10 @@ const userSchema = new mongoose.Schema({
         type: String,
         enum: ['student', 'employee', 'admin'],
         default: 'student'
+    },
+    isActive: {
+        type: Boolean,
+        default: true
     },
     memberId: {
         type: String,
@@ -39,20 +44,19 @@ const userSchema = new mongoose.Schema({
         trim: true,
         match: [/^\+?[1-9]\d{1,14}$/, 'enter a valid phone number'],
     },
-    borrowedBooks: [{
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Book'
-    }],
     isActive: {
         type: Boolean,
         default: true
+    },
+    refreshToken: {
+        type: String,
+        select: false
     }
 }, {timestamps: true});
 
 userSchema.pre('save', async function(next) {
     if (!this.isModified('password')) return next();
     this.password = await bcrypt.hash(this.password, 10);
-    return next();
 })
 
 userSchema.methods.comparePassword = async function(password){

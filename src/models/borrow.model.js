@@ -22,6 +22,14 @@ const borrowSchema = new mongoose.Schema({
     returnDate: {
         type: Date,
     },
+    fine: {
+        type: Number,
+        default: 0
+    },
+    finePaid: {
+        type: Boolean,
+        default: false
+    },
     status: {
         type: String,
         enum: ['borrowed', 'returned'],
@@ -36,5 +44,7 @@ borrowSchema.index({ user: 1, status: 1 });
 borrowSchema.index({ bookCopy: 1, status: 1 });   
 // indexing status and dueDate fields for faster search("Which books are overdue?")
 borrowSchema.index({ status: 1, dueDate: 1 });
+// indexing bookCopy field to ensure that a book copy can only be borrowed once at a time
+borrowSchema.index({bookCopy:1},{unique: true,partialFilterExpression: {status: 'borrowed'}})
 
 export const Borrow = mongoose.model("Borrow", borrowSchema);

@@ -8,13 +8,13 @@ import {asyncHandler} from "../utils/asyncHandler.js"
 const generateAccessAndRefreshToken = async (userId) => {
     try {
         const user = await User.findById(userId)
-        const access = user.generateAccessToken()
-        const refresh = user.generateRefreshToken()
+        const accessToken = await user.generateAccessToken()
+        const refreshToken = await user.generateRefreshToken()
     
-        user.refreshToken = refresh
-        user.save({validateBeforeSave:false})
+        user.refreshToken = refreshToken
+        await user.save({validateBeforeSave:false})
     
-        return {access,refresh}
+        return {accessToken,refreshToken}
     } catch (error) {
         throw new ApiError(500,'error to create refresh and access token')
     }
@@ -22,20 +22,43 @@ const generateAccessAndRefreshToken = async (userId) => {
 
 // register user
 const register = asyncHandler(async (req, res) => {
-    const { username, email, password } = req.body
+    const { username, email, password, role, adminSecret, phoneNumber } = req.body
+    let { memberId } = req.body
 
     if([username, email, password].some(field => field?.trim() === '')) {
         throw new ApiError(400, "All fields are required")
     }
 
-    const existingUser = await User.findOne({$or: [{email}, {username}]})
+    const allowedRoles = ['student', 'employee', 'admin']
+    const userRole = allowedRoles.includes(role) ? role : 'student'
+
+    if(userRole === 'admin') {
+        if(!adminSecret || adminSecret !== process.env.ADMIN_REGISTER_SECRET) {
+            throw new ApiError(403, "Invalid admin registration secret")
+        }
+    }
+
+    if(!memberId || memberId.trim() === '') {
+        const prefixMap = {
+            'student': 'STU',
+            'employee': 'EMP',
+            'admin': 'ADM'
+        }
+        const prefix = prefixMap[userRole]
+        const randomNumber = Math.floor(1000 + Math.random() * 9000)
+        memberId = `${prefix}${randomNumber}`
+    }else{
+        memberId = memberId.trim().toUpperCase()
+    }
+   
+    const existingUser = await User.findOne({$or: [{email}, {username}, {memberId}]})
     if(existingUser){
         throw new ApiError(400, "User with this email or username already exists")
     }
     
-    const newUser = await User.create({ username, email, password })
+    const newUser = await User.create({ username, email, password, role: userRole, memberId, phoneNumber })
 
-    const createdUser = await User.findById(newUser._id).select('-password -refreshToken -createdAt -updatedAt')
+    const createdUser = await User.findById(newUser._id).select('-password -refreshToken')
     if(!createdUser){
         throw new ApiError(500, "Something went wrong ,registering faild")
     }
@@ -47,13 +70,16 @@ const register = asyncHandler(async (req, res) => {
 const login = asyncHandler(async (req, res) => {
     const { username , password } = req.body
     
-    if([username, password].some(field => field?.trim() === '')) {
+    if(!username || !password || [username, password].some(field => field?.trim() === '')) {
         throw new ApiError(400, "All fields are required")
     }
 
-    const user = await User.findOne({username})
+    const user = await User.findOne({username}).select('+password')
     if(!user){
         throw new ApiError(400, "Invalid username")
+    }
+    if(!user.isActive){
+        throw new ApiError(403, "User account is deactivated")
     }
 
     const isPasswordValid = await user.comparePassword(password)
@@ -62,7 +88,9 @@ const login = asyncHandler(async (req, res) => {
     }
 
     const { accessToken,refreshToken}=await generateAccessAndRefreshToken(user.id)  
-    
+    if(!accessToken || !refreshToken){
+        throw new ApiError(500, "Failed to generate access and refresh tokens")
+    }
     const loggedInUser = await User.findById(user._id).select('-refreshToken')
     const options = {
         httpOnly:true,

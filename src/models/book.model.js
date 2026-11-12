@@ -30,10 +30,8 @@ const bookSchema = new mongoose.Schema({
         trim: true
     },
     category: {
-        type: [String],
+        type: [{ type: String, trim: true, lowercase: true }],
         required: true,
-        trim: true,
-        lowercase: true,
         index: true
     },
     coverImage: {

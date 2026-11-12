@@ -2,6 +2,7 @@ import {Book} from '../models/book.model.js'
 import { asyncHandler } from '../utils/asyncHandler.js'
 import { ApiError } from '../utils/ApiError.js'
 import { ApiResponse } from '../utils/ApiResponse.js'
+import mongoose from 'mongoose'
 
 // get all books from database
 const allBooks = asyncHandler(async(req,res) => {
@@ -52,7 +53,7 @@ const getByCategory = asyncHandler(async(req,res) => {
     const page = parseInt(req.query.page) || 1
     const limit = parseInt(req.query.limit) || 20
 
-    const searchCategory = category.tolowerCase().trim()
+    const searchCategory = category.toLowerCase().trim()
 
     const bookAggregate = Book.aggregate([
         {
@@ -99,7 +100,7 @@ const addBook = asyncHandler(async(req,res) => {
         throw new ApiError(400, 'title, author and isbn are required')
     }
 
-    if(!category || (!Array.isArray(category) && category.length === 0)){
+    if(!category || (Array.isArray(category) && category.length === 0)){
         throw new ApiError(400, 'at least one category is required')
     }
 
@@ -136,9 +137,7 @@ const addBook = asyncHandler(async(req,res) => {
 const removeBook = asyncHandler(async(req,res) => {
     const { id } = req.params
 
-    if(!id){
-        throw new ApiError(400, 'book id is required')
-    }
+    if (!mongoose.isValidObjectId(id)) throw new ApiError(400, 'Invalid book id')
     const book = await Book.findByIdAndDelete(id)
     if(!book){
         throw new ApiError(404, 'cannnot delete, book not found')
@@ -165,7 +164,7 @@ const updateBook = asyncHandler(async(req,res) => {
             updateFields[key] = req.body[key]
         }
     })
-    
+
     if(updateFields.category) {
         updateFields.category = Array.isArray(updateFields.category) ? updateFields.category:[updateFields.category]
     }
@@ -174,7 +173,7 @@ const updateBook = asyncHandler(async(req,res) => {
         throw new ApiError(400, 'pageCount must be greater than 0')
     }
 
-    const updatedBook = await Book.findByIdAndUpdate(id, updateFields, {new: true})
+    const updatedBook = await Book.findByIdAndUpdate(id, updateFields, {new: true},{runValidators: true})
     if(!updatedBook){
         throw new ApiError(404, 'book not found')
     }

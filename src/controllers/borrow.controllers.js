@@ -5,7 +5,8 @@ import { User } from '../models/user.model.js'
 import { asyncHandler } from '../utils/asyncHandler.js'
 import { ApiError } from '../utils/ApiError.js'
 import { ApiResponse } from '../utils/ApiResponse.js'
-import calcFine from '../utils/calcFine.js'
+import { calcFine } from '../utils/calcFine.js'
+import { GRACE_PERIOD_DAYS, DAILY_FINE } from '../constants.js'
 
 const borrowBook = asyncHandler(async (req, res) => {
     const { bookCopyId, userId } = req.body
@@ -31,18 +32,24 @@ const borrowBook = asyncHandler(async (req, res) => {
     }
 
     const maxLimit = settings?.maxBorrowLimit || 5
-    if(user.borrowedBooks.length >= maxLimit){
+    const activeCount = await Borrow.countDocuments({ user: userId, status: 'borrowed' })
+    if(activeCount >= maxLimit){
         throw new ApiError(400,'borrowing limit exceeded')
     }
-
-    if(bookCopy.status !== 'available') {
+    
+    const claimed = await BookCopy.findOneAndUpdate(
+        { _id: bookCopyId, status: 'available' },
+        { $set: { status: 'issued' } },
+        { new: true }
+    )
+    if(!claimed) {
         throw new ApiError(400, 'Book copy is not available for borrowing')
     }
     
     const borrowDate = new Date()
     let dueDate
 
-    if(settings?.dueDatepolicy === 'semester_end' && settings?.semesterEndDate) {
+    if(settings?.dueDatePolicy === 'semester_end' && settings?.semesterEndDate) {
         dueDate = new Date(settings.semesterEndDate)
 
         if(dueDate <= borrowDate) {
@@ -63,15 +70,6 @@ const borrowBook = asyncHandler(async (req, res) => {
         dueDate,
         status: 'borrowed',
     })
-
-    if(!newBorrow) {
-        throw new ApiError(500, 'Failed to create borrow record')
-    }
-
-    await Promise.all([
-        bookCopy.save(),
-        user.save()
-    ])
 
     return res.status(201).json(new ApiResponse(201, newBorrow, 'Book borrowed successfully'))
 })    

@@ -36,6 +36,11 @@ const settingsSchema = new mongoose.Schema({
         required: true,
         default: 5.00,
     },
+    gracePeriodDays: {
+        type: Number,
+        default: 7,
+        min: 0
+    },
     dueDatePolicy: {
         type: String,
         enum: ['fixed_days', 'semester_end'],
