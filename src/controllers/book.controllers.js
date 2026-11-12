@@ -1,6 +1,6 @@
 import {Book} from '../models/book.model.js'
 import { asyncHandler } from '../utils/asyncHandler.js'
-import { ApiError } from '../utils/ApiError'
+import { ApiError } from '../utils/ApiError.js'
 import { ApiResponse } from '../utils/ApiResponse.js'
 
 // get all books from database
@@ -95,11 +95,11 @@ const addBook = asyncHandler(async(req,res) => {
         pageCount
     } = req.body
 
-    if(!title?.trim(), !author?.trim(), !isbn?.trim()){
+    if(!title?.trim()  || !author?.trim() || !isbn?.trim()){
         throw new ApiError(400, 'title, author and isbn are required')
     }
 
-    if(!category || !Array.isArray(category) && category.length === 0){
+    if(!category || (!Array.isArray(category) && category.length === 0)){
         throw new ApiError(400, 'at least one category is required')
     }
 
@@ -112,7 +112,7 @@ const addBook = asyncHandler(async(req,res) => {
         throw new ApiError(400, 'book with this isbn already exists')
     }
 
-    const newBook = new Book.create({
+    const newBook = await Book.create({
         title,
         author,
         category: Array.isArray(category) ? category.map(cat => cat.trim().toLowerCase()) : [category.trim().toLowerCase()],
@@ -134,8 +134,11 @@ const addBook = asyncHandler(async(req,res) => {
 
 // remove book
 const removeBook = asyncHandler(async(req,res) => {
-    const { id } = req.prams
+    const { id } = req.params
 
+    if(!id){
+        throw new ApiError(400, 'book id is required')
+    }
     const book = await Book.findByIdAndDelete(id)
     if(!book){
         throw new ApiError(404, 'cannnot delete, book not found')
@@ -157,8 +160,12 @@ const updateBook = asyncHandler(async(req,res) => {
     }
 
     const updateFields = {}
-    Object.keys(req.body).forEach(key => req.body[key] !== undefined && (updateFields[key] = req.body[key]))
-
+    Object.keys(req.body).forEach((key) => {
+        if(req.body[key] !== undefined) {
+            updateFields[key] = req.body[key]
+        }
+    })
+    
     if(updateFields.category) {
         updateFields.category = Array.isArray(updateFields.category) ? updateFields.category:[updateFields.category]
     }

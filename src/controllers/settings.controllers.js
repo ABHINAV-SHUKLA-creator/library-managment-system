@@ -18,7 +18,7 @@ const getSettings = asyncHandler(async (req, res) => {
             borrowDurationDays: 14
         });
     }
-    return res.status(200).json(new ApiResponse(200, settings, "Settings retrieved successfully"));
+    return res.status(200).json(new ApiResponse(200, "Settings retrieved successfully", settings));
 });
 
 const updateSettings = asyncHandler(async (req, res) => {
@@ -26,8 +26,12 @@ const updateSettings = asyncHandler(async (req, res) => {
 
     const updateFields = {}
 
-    Object.keys(req.body).forEach(key => req.body[key] !== undefined) && (updateFields[key] = req.body[key])
-    
+    Object.keys(req.body).forEach((key) => {
+        if(req.body[key] !== undefined) {
+            updateFields[key] = req.body[key]
+        }
+    })
+
     if(updateFields.maxBorrowLimit!== undefined && updateFields.maxBorrowLimit < 1) {
         throw new ApiError(400, "Max borrow limit must be at least 1")
     }
@@ -76,7 +80,7 @@ const updateSettings = asyncHandler(async (req, res) => {
     return res
     .status(200)
     .json(
-        new ApiResponse(200, updatedSettings, "Settings updated successfully")
+        new ApiResponse(200, "Settings updated successfully", updatedSettings)
     )
 });
 

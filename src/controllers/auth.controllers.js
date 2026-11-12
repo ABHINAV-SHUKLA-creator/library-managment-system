@@ -1,8 +1,8 @@
-import { ApiError } from "../utils/ApiError"
-import { ApiResponse } from "../utils/ApiResponse"
-import { User } from "../models/user.model"
+import { ApiError } from "../utils/ApiError.js"
+import { ApiResponse } from "../utils/ApiResponse.js"
+import { User } from "../models/user.model.js"
 import jwt from "jsonwebtoken"
-import {AsyncHandler} from "../utils/asyncHandler"
+import {asyncHandler} from "../utils/asyncHandler.js"
 
 
 const generateAccessAndRefreshToken = async (userId) => {
@@ -21,7 +21,7 @@ const generateAccessAndRefreshToken = async (userId) => {
 }
 
 // register user
-const register = AsyncHandler(async (req, res) => {
+const register = asyncHandler(async (req, res) => {
     const { username, email, password } = req.body
 
     if([username, email, password].some(field => field?.trim() === '')) {
@@ -44,11 +44,11 @@ const register = AsyncHandler(async (req, res) => {
 })
 
 // login user
-const login = AsyncHandler(async (req, res) => {
+const login = asyncHandler(async (req, res) => {
     const { username , password } = req.body
     
     if([username, password].some(field => field?.trim() === '')) {
-        throw new errror(400, "All fields are required")
+        throw new ApiError(400, "All fields are required")
     }
 
     const user = await User.findOne({username})
@@ -56,14 +56,14 @@ const login = AsyncHandler(async (req, res) => {
         throw new ApiError(400, "Invalid username")
     }
 
-    const isPasswordValid = await existingUser.comparePassword(password)
+    const isPasswordValid = await user.comparePassword(password)
     if(!isPasswordValid){
         throw new ApiError(400, "wrong password")
     }
 
-    const {refreshToken, accessToken}=generateAccessAndRefreshToken(user.id)  
+    const { accessToken,refreshToken}=await generateAccessAndRefreshToken(user.id)  
     
-    const loggedInUser = await user.findById(user._id).select('-refreshToken')
+    const loggedInUser = await User.findById(user._id).select('-refreshToken')
     const options = {
         httpOnly:true,
         secure:true,
@@ -80,7 +80,7 @@ const login = AsyncHandler(async (req, res) => {
 })
 
 // logout user
-const logout = AsyncHandler(async (req, res) =>{
+const logout = asyncHandler(async (req, res) =>{
     await User.findByIdAndUpdate(
         req.user_id,{refreshToken:undefined},{new:true}
     )
