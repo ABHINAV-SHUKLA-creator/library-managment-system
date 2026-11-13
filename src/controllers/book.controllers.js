@@ -220,4 +220,4 @@ const updateBook = asyncHandler(async(req,res) => {
     )   
 })
 
-export { allBooks, getById, getByCategory, addBook, removeBook, updateBook }
+export { allBooks, getById, getByCategory, addBook, removeBook, updateBook, addCopies }
