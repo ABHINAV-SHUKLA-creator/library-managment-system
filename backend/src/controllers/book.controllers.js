@@ -167,9 +167,12 @@ const removeBook = asyncHandler(async(req,res) => {
     if(!book){
         throw new ApiError(404, 'cannnot delete, book not found')
     }
+    if (await BookCopy.exists({ book: id })) {
+       throw new ApiError(409, 'Cannot delete a book that still has copies')
+    }
 
     await BookCopy.deleteMany({ book: id })
-    
+
     return res
     .status(200)
     .json(

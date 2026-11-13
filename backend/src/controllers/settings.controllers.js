@@ -72,6 +72,10 @@ const updateSettings = asyncHandler(async (req, res) => {
         
     )
 
+    if(!updatedSettings){
+        throw new ApiError(404, "Settings not found")
+    }
+
     return res
     .status(200)
     .json(

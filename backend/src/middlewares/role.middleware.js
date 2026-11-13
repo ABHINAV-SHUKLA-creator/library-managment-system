@@ -1,6 +1,6 @@
 import {ApiError} from "../utils/ApiError.js";
 
-export const verifyRole = (roles) => {
+export const verifyRole = (...roles) => {
     return (req,res,next) => {
         if(!req.user){
             throw new ApiError(401, 'unorized request, user not found');
