@@ -75,7 +75,7 @@ const borrowBook = asyncHandler(async (req, res) => {
         throw new ApiError(500, 'Error occurred while creating borrow record')
     }
 
-    return res.status(201).json(new ApiResponse(201, newBorrow, 'Book borrowed successfully'))
+    return res.status(201).json(new ApiResponse(201,'Book borrowed successfully', newBorrow))
 })    
 
 const returnBook = asyncHandler(async (req, res) => {
@@ -94,13 +94,13 @@ const returnBook = asyncHandler(async (req, res) => {
         throw new ApiError(400, 'This book has already been returned or is not currently borrowed')
     }
 
-    const [bookCopy, user, settings] = await Promise.all([
+    const [bookCopy, settings] = await Promise.all([
         BookCopy.findById(borrowRecord.bookCopy),
         Settings.findOne({})
     ])
 
     const returnDate = new Date()
-    const dailyFine = settings?.dailyFine ?? DAILY_FINE
+    const dailyFine = settings?.finePerDay ?? DAILY_FINE
     const gracePeriodDays = settings?.gracePeriodDays ?? GRACE_PERIOD_DAYS
     const fine = calcFine(borrowRecord.dueDate, returnDate, dailyFine, gracePeriodDays)
 

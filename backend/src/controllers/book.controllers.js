@@ -168,6 +168,8 @@ const removeBook = asyncHandler(async(req,res) => {
         throw new ApiError(404, 'cannnot delete, book not found')
     }
 
+    await BookCopy.deleteMany({ book: id })
+    
     return res
     .status(200)
     .json(

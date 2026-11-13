@@ -42,11 +42,6 @@ const register = asyncHandler(async (req, res) => {
         throw new ApiError(400, "valid fields are required")
     }
 
-    const existingUser = await User.findOne({$or: [{email}, {username}]})
-    if(existingUser){
-        throw new ApiError(400, "User with this email or username already exists")
-    }
-
     const userRole = role ?? 'student'
     if (!Object.keys(ROLE_PREFIX).includes(userRole)) {
         throw new ApiError(400, "role must be 'student', 'employee' or 'admin'")
@@ -107,7 +102,7 @@ const login = asyncHandler(async (req, res) => {
 
     const user = await User.findOne({username}).select('+password')
     if(!user){
-        throw new ApiError(400, "Invalid username")
+        throw new ApiError(401, "Invalid username")
     }
     if(!user.isActive){
         throw new ApiError(403, "User account is deactivated")
@@ -115,7 +110,7 @@ const login = asyncHandler(async (req, res) => {
 
     const isPasswordValid = await user.comparePassword(password)
     if(!isPasswordValid){
-        throw new ApiError(400, "wrong password")
+        throw new ApiError(401, "wrong password")
     }
 
     const { accessToken,refreshToken}=await generateAccessAndRefreshToken(user.id)  
@@ -141,7 +136,7 @@ const login = asyncHandler(async (req, res) => {
 // logout user
 const logout = asyncHandler(async (req, res) =>{
     await User.findByIdAndUpdate(
-        req.user._id,{refreshToken:undefined},{new:true}
+        req.user._id,{ $unset: { refreshToken: 1 } }
     )
 
     const options = {
