@@ -3,6 +3,7 @@ import { asyncHandler } from '../utils/asyncHandler.js'
 import { ApiError } from '../utils/ApiError.js'
 import { ApiResponse } from '../utils/ApiResponse.js'
 import mongoose from 'mongoose'
+import { BookCopy } from '../models/bookCopy.model.js'
 
 // get all books from database
 const allBooks = asyncHandler(async(req,res) => {
@@ -133,6 +134,30 @@ const addBook = asyncHandler(async(req,res) => {
     )
 })
 
+// add copies of a book
+// add physical copies of a book (copy numbers continue from the highest existing one)
+const addCopies = asyncHandler(async (req, res) => {
+    const { id } = req.params
+    if (!mongoose.isValidObjectId(id)) throw new ApiError(400, 'Invalid book id')
+
+    const count = Number(req.body.count ?? 1)
+    if (!Number.isInteger(count) || count < 1 || count > 50) {
+        throw new ApiError(400, 'count must be a whole number between 1 and 50')
+    }
+
+    const book = await Book.findById(id)
+    if (!book) throw new ApiError(404, 'book not found')
+
+    const last = await BookCopy.findOne({ book: id }).sort({ copyNumber: -1 }).select('copyNumber')
+    const start = (last?.copyNumber || 0) + 1
+
+    const copies = await BookCopy.insertMany(
+        Array.from({ length: count }, (_, i) => ({ book: id, copyNumber: start + i }))
+    )
+
+    return res.status(201).json(new ApiResponse(201, `${count} copy(ies) added`, copies))
+})
+
 // remove book
 const removeBook = asyncHandler(async(req,res) => {
     const { id } = req.params
@@ -154,26 +179,36 @@ const removeBook = asyncHandler(async(req,res) => {
 const updateBook = asyncHandler(async(req,res) => {
     const { id } = req.params
 
-    if(!id){
-        throw new ApiError(400, 'book id is required')
+    if(!mongoose.isValidObjectId(id)){
+        throw new ApiError(400, 'book id is invalid')
     }
 
+    const allowed = ['title', 'author', 'category', 'isbn', 'language', 'coverImage', 'publishedDate', 'publisher', 'description', 'pageCount']
     const updateFields = {}
-    Object.keys(req.body).forEach((key) => {
-        if(req.body[key] !== undefined) {
-            updateFields[key] = req.body[key]
+    allowed.forEach((field) => {
+        if(req.body[field] !== undefined){
+            updateFields[field] = req.body[field]
         }
     })
-
-    if(updateFields.category) {
-        updateFields.category = Array.isArray(updateFields.category) ? updateFields.category:[updateFields.category]
+    if(Object.keys(updateFields).length === 0){
+        throw new ApiError(400, 'no valid fields provided for update')
     }
 
-    if(updateFields.pageCount && updateFields.pageCount < 1){
+    if(updateFields.category!==undefined) {
+        const cat = (Array.isArray(updateFields.category) ? updateFields.category : [updateFields.category])
+        .map((c) => c.trim().toLowerCase()).filter((c) => c)
+
+        if(cat.length === 0){
+            throw new ApiError(400, 'at least one category is required')
+        }
+        updateFields.category = cat
+    }
+
+    if(updateFields.pageCount!==undefined && !(Number(updateFields.pageCount) >= 1)){
         throw new ApiError(400, 'pageCount must be greater than 0')
     }
 
-    const updatedBook = await Book.findByIdAndUpdate(id, updateFields, {new: true},{runValidators: true})
+    const updatedBook = await Book.findByIdAndUpdate(id, {$set:updateFields}, {new: true, runValidators: true})
     if(!updatedBook){
         throw new ApiError(404, 'book not found')
     }

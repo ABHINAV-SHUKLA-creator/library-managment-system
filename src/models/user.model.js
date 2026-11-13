@@ -44,19 +44,15 @@ const userSchema = new mongoose.Schema({
         trim: true,
         match: [/^\+?[1-9]\d{1,14}$/, 'enter a valid phone number'],
     },
-    isActive: {
-        type: Boolean,
-        default: true
-    },
     refreshToken: {
         type: String,
         select: false
     }
 }, {timestamps: true});
 
-userSchema.pre('save', async function(next) {
-    if (!this.isModified('password')) return next();
-    this.password = await bcrypt.hash(this.password, 10);
+userSchema.pre('save', async function() {
+    if (!this.isModified('password')) return
+    this.password = await bcrypt.hash(this.password, 10)
 })
 
 userSchema.methods.comparePassword = async function(password){

@@ -36,16 +36,7 @@ const borrowBook = asyncHandler(async (req, res) => {
     if(activeCount >= maxLimit){
         throw new ApiError(400,'borrowing limit exceeded')
     }
-    
-    const claimed = await BookCopy.findOneAndUpdate(
-        { _id: bookCopyId, status: 'available' },
-        { $set: { status: 'issued' } },
-        { new: true }
-    )
-    if(!claimed) {
-        throw new ApiError(400, 'Book copy is not available for borrowing')
-    }
-    
+
     const borrowDate = new Date()
     let dueDate
 
@@ -59,17 +50,30 @@ const borrowBook = asyncHandler(async (req, res) => {
         dueDate = new Date(borrowDate)
         dueDate.setDate(dueDate.getDate() + (settings?.borrowDurationDays || 14))
     }
+    
+    const claimed = await BookCopy.findOneAndUpdate(
+        { _id: bookCopyId, status: 'available' },
+        { $set: { status: 'issued' } },
+        { new: true }
+    )
+    if(!claimed) {
+        throw new ApiError(400, 'Book copy is not available for borrowing')
+    }
 
-    bookCopy.status = 'issued'
-    user.borrowedBooks.push(bookCopyId)
+    let newBorrow
 
-    const newBorrow = await Borrow.create({
-        bookCopy: bookCopyId,
-        user: userId,
-        borrowDate,
-        dueDate,
-        status: 'borrowed',
-    })
+    try{
+        newBorrow = await Borrow.create({
+            bookCopy: bookCopyId,
+            user: userId,
+            borrowDate,
+            dueDate,
+            status: 'borrowed',
+        })
+    } catch (error) {
+        await BookCopy.findByIdAndUpdate(bookCopyId, { $set: { status: 'available' } })
+        throw new ApiError(500, 'Error occurred while creating borrow record')
+    }
 
     return res.status(201).json(new ApiResponse(201, newBorrow, 'Book borrowed successfully'))
 })    
@@ -92,21 +96,16 @@ const returnBook = asyncHandler(async (req, res) => {
 
     const [bookCopy, user, settings] = await Promise.all([
         BookCopy.findById(borrowRecord.bookCopy),
-        User.findById(borrowRecord.user),
         Settings.findOne({})
     ])
 
     const returnDate = new Date()
-    const dailyFine = settings?.dailyFine || 0
-    const gracePeriodDays = settings?.gracePeriodDays || 0
+    const dailyFine = settings?.dailyFine ?? DAILY_FINE
+    const gracePeriodDays = settings?.gracePeriodDays ?? GRACE_PERIOD_DAYS
     const fine = calcFine(borrowRecord.dueDate, returnDate, dailyFine, gracePeriodDays)
 
     if(bookCopy) {
         bookCopy.status = 'available'
-    }
-
-    if(user) {
-        user.borrowedBooks = user.borrowedBooks.filter(id => id.toString() !== bookCopy._id.toString())
     }
 
     borrowRecord.status = 'returned'
@@ -116,13 +115,11 @@ const returnBook = asyncHandler(async (req, res) => {
     await Promise.all([
         borrowRecord.save(),
         bookCopy?.save(),
-        user?.save(),
     ])
 
     return res
     .status(200)
-    .json(new ApiResponse(200,`Book returned successfully. Fine: ${fine}`),{borrowRecord, fine})
+    .json(new ApiResponse(200,`Book returned successfully. Fine: ${fine}`, {borrowRecord, fine}))
 })
 
 export { borrowBook, returnBook }
-

@@ -64,13 +64,17 @@ const updateSettings = asyncHandler(async (req, res) => {
             throw new ApiError(400, "Semester end date must be set when due date policy is 'semester_end'")
         }
     }
-
+   
     const updatedSettings = await Settings.findOneAndUpdate(
         {}, 
         {$set: updateFields}, 
-        {new: true},
-        {runValidators: true}
+        {new: true, runValidators: true},
+        
     )
+
+    if(!updatedSettings) {
+        throw new ApiError(404, "Settings not found")
+    }
 
     return res
     .status(200)
