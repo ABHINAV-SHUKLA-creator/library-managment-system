@@ -10,6 +10,6 @@ router.use(verifyJWT)
 
 router.post('/issue', staff, borrowBook)
 router.post('/return',staff, returnBook)
-router.get('/my',staff, getMyBorrows) 
+router.get('/my', getMyBorrows) 
 
 export default router
