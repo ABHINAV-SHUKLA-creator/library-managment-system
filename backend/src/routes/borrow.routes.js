@@ -8,8 +8,8 @@ const staff=verifyRole('employee', 'admin')
 
 router.use(verifyJWT)
 
-router.post('/issue', borrowBook)
-router.post('/return', returnBook)
-router.get('/my', getMyBorrows) 
+router.post('/issue', staff, borrowBook)
+router.post('/return',staff, returnBook)
+router.get('/my',staff, getMyBorrows) 
 
 export default router
