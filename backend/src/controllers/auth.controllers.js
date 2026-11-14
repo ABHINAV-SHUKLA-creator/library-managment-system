@@ -102,7 +102,7 @@ const login = asyncHandler(async (req, res) => {
 
     const user = await User.findOne({username}).select('+password')
     if(!user){
-        throw new ApiError(401, "Invalid username")
+        throw new ApiError(401, "Invalid username or password")
     }
     if(!user.isActive){
         throw new ApiError(403, "User account is deactivated")
@@ -110,7 +110,7 @@ const login = asyncHandler(async (req, res) => {
 
     const isPasswordValid = await user.comparePassword(password)
     if(!isPasswordValid){
-        throw new ApiError(401, "wrong password")
+        throw new ApiError(401, "Invalid username or password")
     }
 
     const { accessToken,refreshToken}=await generateAccessAndRefreshToken(user.id)  
