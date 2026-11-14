@@ -122,4 +122,58 @@ const returnBook = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200,`Book returned successfully. Fine: ${fine}`, {borrowRecord, fine}))
 })
 
-export { borrowBook, returnBook }
+// logged-in user's own borrows (?status=borrowed|returned&page=&limit=)
+const getMyBorrows = asyncHandler(async (req, res) => {
+    const page = Math.max(parseInt(req.query.page) || 1, 1)
+    const limit = Math.min(Math.max(parseInt(req.query.limit) || 20, 1), 50)
+
+    const filter = { user: req.user._id }
+
+    if(req.query.status !== undefined) {
+        if(!['borrowed', 'returned'].includes(req.query.status)) {
+            throw new ApiError(400, "status must be 'borrowed' or 'returned'")
+        }
+        filter.status = req.query.status
+    }
+
+    const [records, total, settings] = await Promise.all([
+        Borrow.find(filter)
+            .sort({ createdAt: -1 })
+            .skip((page - 1) * limit)
+            .limit(limit)
+            .populate({
+                path: 'bookCopy',
+                select: 'copyNumber book',
+                populate: { path: 'book', select: 'title author isbn coverImage' }
+            })
+            .lean(),
+        Borrow.countDocuments(filter),
+        Settings.findOne({}).lean()
+    ])
+
+    const now = new Date()
+    const dailyFine = settings?.finePerDay ?? DAILY_FINE
+    const gracePeriodDays = settings?.gracePeriodDays ?? GRACE_PERIOD_DAYS
+
+    const borrows = records.map((record) => {
+        const isBorrowed = record.status === 'borrowed'
+        return {
+            ...record,
+            isOverdue: isBorrowed && new Date(record.dueDate) < now,
+            currentFine: isBorrowed
+                ? calcFine(record.dueDate, now, dailyFine, gracePeriodDays)
+                : record.fine
+        }
+    })
+
+    return res.status(200).json(
+        new ApiResponse(200, 'borrows fetched', {
+            borrows,
+            page,
+            limit,
+            total,
+            totalPages: Math.ceil(total / limit)
+        })
+    )
+})
+export { borrowBook, returnBook, getMyBorrows }
