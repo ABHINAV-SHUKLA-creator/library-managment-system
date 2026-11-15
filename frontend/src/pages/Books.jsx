@@ -6,21 +6,24 @@ import BookCard from '../components/BookCard.jsx'
 const PAGE_SIZE = 12
 
 export default function Books() {
-  // page and category live in the URL, so refresh and the back button keep working
+  // search, category and page live in the URL, so refresh and the back button keep working
   const [params, setParams] = useSearchParams()
   const page = Math.max(parseInt(params.get('page')) || 1, 1)
   const category = params.get('category') || ''
+  const search = params.get('search') || ''
 
-  const key = `${category}|${page}`
+  const key = `${category}|${search}|${page}`
   const [result, setResult] = useState({ key: null, data: null, error: '' })
   const loading = result.key !== key // true until the response for the current URL arrives
 
   useEffect(() => {
     let cancelled = false
     const url = category ? `/books/category/${encodeURIComponent(category)}` : '/books'
+    const query = { page, limit: PAGE_SIZE }
+    if (search && !category) query.search = search
 
     api
-      .get(url, { params: { page, limit: PAGE_SIZE } })
+      .get(url, { params: query })
       .then((res) => {
         if (!cancelled) setResult({ key, data: res.data.data, error: '' })
       })
@@ -37,14 +40,23 @@ export default function Books() {
     return () => {
       cancelled = true
     }
-  }, [key, page, category])
+  }, [key, page, category, search])
 
-  const goTo = (nextPage, nextCategory = category) => {
+  // change one thing in the URL; page goes back to 1 unless you pass it.
+  // choosing a category clears the search and the other way round.
+  const update = ({ page: nextPage = 1, category: nextCategory = category, search: nextSearch = search }) => {
     const next = {}
     if (nextCategory) next.category = nextCategory
+    if (nextSearch) next.search = nextSearch
     if (nextPage > 1) next.page = String(nextPage)
     setParams(next)
     window.scrollTo({ top: 0 })
+  }
+
+  const handleSearch = (e) => {
+    e.preventDefault()
+    const text = new FormData(e.currentTarget).get('q').trim()
+    update({ search: text, category: '' })
   }
 
   const { data, error } = result
@@ -55,16 +67,43 @@ export default function Books() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold text-gray-900">Books</h1>
 
-        {category && (
-          <button
-            type="button"
-            onClick={() => goTo(1, '')}
-            className="rounded-full bg-blue-100 px-3 py-1 text-sm text-blue-800 hover:bg-blue-200"
-          >
-            Category: {category} ✕
+        <form onSubmit={handleSearch} className="flex w-full gap-2 sm:w-auto">
+          {/* key makes the box update when the search is cleared with the chip */}
+          <input
+            key={search}
+            name="q"
+            defaultValue={search}
+            placeholder="Search title, author..."
+            className="w-full rounded border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none sm:w-64"
+          />
+          <button type="submit" className="rounded bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-700">
+            Search
           </button>
-        )}
+        </form>
       </div>
+
+      {(category || search) && (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {category && (
+            <button
+              type="button"
+              onClick={() => update({ category: '' })}
+              className="rounded-full bg-blue-100 px-3 py-1 text-sm text-blue-800 hover:bg-blue-200"
+            >
+              Category: {category} ✕
+            </button>
+          )}
+          {search && (
+            <button
+              type="button"
+              onClick={() => update({ search: '' })}
+              className="rounded-full bg-blue-100 px-3 py-1 text-sm text-blue-800 hover:bg-blue-200"
+            >
+              Search: {search} ✕
+            </button>
+          )}
+        </div>
+      )}
 
       {loading && <p className="mt-6 text-gray-500">Loading books...</p>}
 
@@ -78,11 +117,15 @@ export default function Books() {
 
       {!loading && !error && books.length > 0 && (
         <>
-          <p className="mt-1 text-sm text-gray-500">{data.totalBooks} books</p>
+          <p className="mt-3 text-sm text-gray-500">{data.totalBooks} books</p>
 
           <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {books.map((book) => (
-              <BookCard key={book._id} book={book} onCategoryClick={(c) => goTo(1, c)} />
+              <BookCard
+                key={book._id}
+                book={book}
+                onCategoryClick={(c) => update({ category: c, search: '' })}
+              />
             ))}
           </div>
 
@@ -90,7 +133,7 @@ export default function Books() {
             <button
               type="button"
               disabled={!data.hasPrevPage}
-              onClick={() => goTo(page - 1)}
+              onClick={() => update({ page: page - 1 })}
               className="rounded border border-gray-300 bg-white px-3 py-1.5 text-sm disabled:opacity-40"
             >
               Previous
@@ -101,7 +144,7 @@ export default function Books() {
             <button
               type="button"
               disabled={!data.hasNextPage}
-              onClick={() => goTo(page + 1)}
+              onClick={() => update({ page: page + 1 })}
               className="rounded border border-gray-300 bg-white px-3 py-1.5 text-sm disabled:opacity-40"
             >
               Next

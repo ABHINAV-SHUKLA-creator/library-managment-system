@@ -56,7 +56,11 @@ const bookSchema = new mongoose.Schema({
 }, {timestamps: true});
 
 // indexing the title, author, description, and category fields for text search
-bookSchema.index({ title: 'text', author: 'text' , description: 'text' , category: 'text' }, { weights: { title: 5, author: 3, description: 2, category: 1 } });
+bookSchema.index(
+    { title: 'text', author: 'text' , description: 'text' , category: 'text' }, 
+    { weights: { title: 5, author: 3, description: 2, category: 1 },
+    default_language: 'none', language_override: 'searchLanguage'}
+);
 
 // pagination
 bookSchema.plugin(mongooseAggregatePaginate)

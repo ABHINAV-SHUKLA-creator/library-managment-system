@@ -1,10 +1,16 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/useAuth.js'
 
+const ALL = ['student', 'employee', 'admin']
+const STAFF = ['employee', 'admin']
+
 // add a line here for every new page; roles decides who sees the link
 const links = [
-  { to: '/', label: 'Books', roles: ['student', 'employee', 'admin'] },
-  { to: '/my-borrows', label: 'My borrows', roles: ['student', 'employee', 'admin'] },
+  { to: '/', label: 'Books', roles: ALL },
+  { to: '/my-borrows', label: 'My borrows', roles: ALL },
+  { to: '/staff/issue', label: 'Issue', roles: STAFF },
+  { to: '/staff/borrows', label: 'Borrows', roles: STAFF },
+  { to: '/staff/students', label: 'Students', roles: STAFF },
 ]
 
 export default function Navbar() {
@@ -18,10 +24,10 @@ export default function Navbar() {
 
   return (
     <header className="border-b border-gray-200 bg-white">
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
-        <div className="flex items-center gap-6">
+      <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-3 sm:px-6">
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-1">
           <span className="text-lg font-bold text-gray-900">Library</span>
-          <nav className="flex gap-1">
+          <nav className="flex flex-wrap gap-1">
             {links
               .filter((link) => link.roles.includes(user.role))
               .map((link) => (
@@ -30,7 +36,7 @@ export default function Navbar() {
                   to={link.to}
                   end
                   className={({ isActive }) =>
-                    `rounded px-3 py-2 text-sm font-medium ${
+                    `whitespace-nowrap rounded px-3 py-2 text-sm font-medium ${
                       isActive ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:text-gray-900'
                     }`
                   }
@@ -51,7 +57,7 @@ export default function Navbar() {
           <button
             type="button"
             onClick={handleLogout}
-            className="rounded bg-gray-800 px-3 py-1.5 text-sm text-white hover:bg-gray-900"
+            className="whitespace-nowrap rounded bg-gray-800 px-3 py-1.5 text-sm text-white hover:bg-gray-900"
           >
             Log out
           </button>

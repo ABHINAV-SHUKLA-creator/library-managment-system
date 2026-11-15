@@ -5,6 +5,11 @@ import Login from './pages/Login.jsx'
 import Register from './pages/Register.jsx'
 import Books from './pages/Books.jsx'
 import MyBorrows from './pages/MyBorrows.jsx'
+import StaffIssue from './pages/staff/StaffIssue.jsx'
+import StaffBorrows from './pages/staff/StaffBorrows.jsx'
+import StaffStudents from './pages/staff/StaffStudents.jsx'
+
+const STAFF = ['employee', 'admin']
 
 export default function App() {
   return (
@@ -17,6 +22,13 @@ export default function App() {
         <Route element={<Layout />}>
           <Route path="/" element={<Books />} />
           <Route path="/my-borrows" element={<MyBorrows />} />
+
+          {/* staff only */}
+          <Route element={<ProtectedRoute roles={STAFF} />}>
+            <Route path="/staff/issue" element={<StaffIssue />} />
+            <Route path="/staff/borrows" element={<StaffBorrows />} />
+            <Route path="/staff/students" element={<StaffStudents />} />
+          </Route>
         </Route>
       </Route>
 

@@ -7,6 +7,7 @@ import { ApiError } from '../utils/ApiError.js'
 import { ApiResponse } from '../utils/ApiResponse.js'
 import { calcFine } from '../utils/calcFine.js'
 import { GRACE_PERIOD_DAYS, DAILY_FINE } from '../constants.js'
+import mongoose from 'mongoose'
 
 const borrowBook = asyncHandler(async (req, res) => {
     const { bookCopyId, userId } = req.body
@@ -176,4 +177,75 @@ const getMyBorrows = asyncHandler(async (req, res) => {
         })
     )
 })
-export { borrowBook, returnBook, getMyBorrows }
+
+// all borrows, for staff (?status=&overdue=true&userId=&page=&limit=)
+const getAllBorrows = asyncHandler(async (req, res) => {
+    const page = Math.max(parseInt(req.query.page) || 1, 1)
+    const limit = Math.min(Math.max(parseInt(req.query.limit) || 20, 1), 50)
+    const { status, overdue, userId } = req.query
+
+    const filter = {}
+
+    if(status !== undefined) {
+        if(!['borrowed', 'returned'].includes(status)) {
+            throw new ApiError(400, "status must be 'borrowed' or 'returned'")
+        }
+        filter.status = status
+    }
+
+    // overdue = still borrowed and the due date has passed
+    if(overdue === 'true') {
+        filter.status = 'borrowed'
+        filter.dueDate = { $lt: new Date() }
+    }
+
+    if(userId !== undefined) {
+        if(!mongoose.isValidObjectId(userId)) {
+            throw new ApiError(400, 'invalid userId')
+        }
+        filter.user = userId
+    }
+
+    const [records, total, settings] = await Promise.all([
+        Borrow.find(filter)
+            .sort({ createdAt: -1 })
+            .skip((page - 1) * limit)
+            .limit(limit)
+            .populate({ path: 'user', select: 'username memberId email' })
+            .populate({
+                path: 'bookCopy',
+                select: 'copyNumber book',
+                populate: { path: 'book', select: 'title author isbn coverImage' }
+            })
+            .lean(),
+        Borrow.countDocuments(filter),
+        Settings.findOne({}).lean()
+    ])
+
+    const now = new Date()
+    const dailyFine = settings?.finePerDay ?? DAILY_FINE
+    const gracePeriodDays = settings?.gracePeriodDays ?? GRACE_PERIOD_DAYS
+
+    const borrows = records.map((record) => {
+        const isBorrowed = record.status === 'borrowed'
+        return {
+            ...record,
+            isOverdue: isBorrowed && new Date(record.dueDate) < now,
+            currentFine: isBorrowed
+                ? calcFine(record.dueDate, now, dailyFine, gracePeriodDays)
+                : record.fine
+        }
+    })
+
+    return res.status(200).json(
+        new ApiResponse(200, 'borrows fetched', {
+            borrows,
+            page,
+            limit,
+            total,
+            totalPages: Math.ceil(total / limit)
+        })
+    )
+})
+
+export { borrowBook, returnBook, getMyBorrows, getAllBorrows }

@@ -20,11 +20,13 @@ import authRoutes from './routes/auth.routes.js'
 import bookRoutes from './routes/book.routes.js'
 import borrowRoutes from './routes/borrow.routes.js'
 import settingsRoutes from './routes/settings.routes.js'
+import userRoutes from './routes/user.routes.js'
 
 app.use('/api/auth', authRoutes)
 app.use('/api/books', bookRoutes)
 app.use('/api/borrow', borrowRoutes)
 app.use('/api/settings', settingsRoutes)
+app.use('/api/users', userRoutes)
 
 // error handling middleware
 import { errorHandler } from './middlewares/error.middleware.js'

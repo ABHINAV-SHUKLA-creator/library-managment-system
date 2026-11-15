@@ -10,7 +10,14 @@ const allBooks = asyncHandler(async(req,res) => {
     const page = parseInt(req.query.page) || 1
     const limit = parseInt(req.query.limit) || 20
 
-    const bookAggregate = Book.aggregate([])
+    // optional text search on title, author, description and category
+    const { search } = req.query
+    const pipeline = []
+    if (typeof search === 'string' && search.trim()) {
+        pipeline.push({ $match: { $text: { $search: search.trim() } } })
+    }
+
+    const bookAggregate = Book.aggregate(pipeline)
 
     const options = {
         page,
@@ -225,4 +232,18 @@ const updateBook = asyncHandler(async(req,res) => {
     )   
 })
 
-export { allBooks, getById, getByCategory, addBook, removeBook, updateBook, addCopies }
+// list the physical copies of a book (staff)
+const getCopies = asyncHandler(async (req, res) => {
+    const { id } = req.params
+    if (!mongoose.isValidObjectId(id)) {
+        throw new ApiError(400, 'Invalid book id')
+    }
+
+    const copies = await BookCopy.find({ book: id }).sort({ copyNumber: 1 })
+
+    return res
+    .status(200)
+    .json(new ApiResponse(200, 'copies fetched', copies))
+})
+
+export { allBooks, getById, getByCategory, addBook, removeBook, updateBook, addCopies, getCopies }
